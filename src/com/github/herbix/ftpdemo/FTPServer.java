@@ -1,7 +1,5 @@
 package com.github.herbix.ftpdemo;
 
-//import java.io.InputStream;
-//import java.io.OutputStream;
 import java.net.*;
 import java.io.*;
 import java.net.ServerSocket;
@@ -13,13 +11,14 @@ import java.util.regex.Pattern;
 
 public class FTPServer {
 	public static boolean connectClient = true;
+	@SuppressWarnings("resource")
 	public static void main(String[] args) throws Throwable {
-		ServerSocket server = new ServerSocket(8888);
+		ServerSocket server = new ServerSocket(21);
 		while(true)
 		{
 			Socket client = server.accept();
 			Thread t = new mulipleServer(client);
-			t.start();	
+			t.start();
 		}
 		
 	}
@@ -28,23 +27,18 @@ public class FTPServer {
 
 class mulipleServer extends Thread{
 	static String EOS = "\r\n";
+	public static String fileName;
+	public static boolean openDataPort = false;
+	public static boolean readFile = false;
+	public static boolean isGet = false;
 	Thread t;
-	public boolean connectClient = false;
-	public boolean openPORT = false;
-	public boolean openPASV = false;
+	public static boolean connectClient = false;
+	public int model = 0;//1 means port modle, 2 means passive model
 	InetAddress clientAddr;
 	int clientPort;
 	Socket client;
 	InputStream in;
 	OutputStream out;
-		public static boolean isEmail(String email) {
-		Pattern emailPattern = Pattern.compile("\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*");
-		Matcher matcher = emailPattern.matcher(email);
-		if(matcher.find()){
-		return true;
-		}
-		return false;
-	}
 	mulipleServer (Socket client)throws Throwable
 	{
 		this.client = client;
@@ -54,57 +48,62 @@ class mulipleServer extends Thread{
 	}
 	public void run(){
 		try{
-		boolean isLogin = false;
+//		boolean isLogin = false;
 		
-		out.write(("220 ftp.ssast.org FTP server ready"+EOS).getBytes());
-		while(!isLogin)
+		out.write(("220 Anonymous FTP server ready."+EOS).getBytes());
+		while(true)
 		{
 			//get the command
 		byte[] buffer = new byte[4096];
 		in.read(buffer);
 		String command = new String(buffer);
 		command = command.trim();
-		//command = command.substring(0,14);
 		System.out.println(command);
-		System.out.println("ab");
 		//USER annoymous
-		if(command.equals("233"))
+		if(command.equals("USER anonymous"))
 		{
 			String response = "331 Guest login ok, send your complete e-mail address as password.";
 			out.write((response+EOS).getBytes());
 			//get the email Address
-			while(true)
+
+			in.read(buffer);
+			command = new String(buffer);
+			command = command.trim();
+			String[] email = command.split(" ");
+			System.out.println(command);
+			System.out.println(email.length);
+			if(email.length == 2 && email[0].equals("PASS")&&isEmail(email[1]))
 			{
-				in.read(buffer);
-				command = new String(buffer);
-				command = command.trim();
-				String[] email = command.split(" ");
-				System.out.println(command);
-				System.out.println(email.length);
-				if(email.length == 2 && email[0].equals("PASS")&&isEmail(email[1]))
-				{
-					isLogin = true;
-					break;
-				}//login in
-				response = "please input your email address:PASS XX@XX.com";
-				out.write((response+EOS).getBytes());
-			}
+//				isLogin = true;
+				break;
+			}//login in
+			response = "530 invalid email address!";
+			out.write((response+EOS).getBytes());
 		}
 		else
 			{
-			String response = "please login in at first";
+			String response = "500 cannot understand the command, we only support USER anonymous to login in at current!";
 			out.write((response+EOS).getBytes());
 			}
 		}
-		responseMeg("login success");
+		responseMeg("230-"
+				+ "230-Welcome to"
+				+ "230- School of Software\r\n"
+				+ "230- FTP Archives at ftp.ssast.org\r\n"
+				+ "230-\r\n"
+				+ "230-This site is provided as a public service by School of\r\n"
+				+ "230-Software. Use in violation of any applicable laws is strictly\r\n"
+				+ "230-prohibited. We make no guarantees, explicit or implicit, about the\r\n"
+				+ "230-contents of this site. Use at your own risk.\r\n"
+				+ "230-\r\n"
+				+ "230 Guest login ok, access restrictions apply.");
 		//after login in
-		boolean openDataPort = false;
 		while(true)
 		{
 			String[] command = getCommand();
-			if(command.length < 1)
+			if(command == null || command.length < 1)
 			{
-				responseMeg("please input correct command");
+				responseMeg("500 please input correct command");
 				continue;
 			}
 			switch(command[0])
@@ -113,46 +112,92 @@ class mulipleServer extends Thread{
 				if(command.length == 2)
 				{
 					getClientIPPort(command[1]);
+					command[1] = command[1].trim();
 					openDataPort = true;
-
+					fileName = command[1];
 					 //start a new thread to transfrom the data
-					t = new dataPort(clientAddr, clientPort);
+					t = new portModel(clientAddr, clientPort);
+					command[1] = command[1].trim();
 					responseMeg("200 Port Model "+command[1]);
-					t.start();
-					t.join();//shanchu
+					model = 1;
 				}
 				else
 				{
-					responseMeg("invalid para");
+					responseMeg("500 invalid para");
 				}
 				break;
 			case"PASV":
-				
+				if(command.length != 1)
+				{
+					responseMeg("500 invalid para");
+					break;
+				}
+				openDataPort = true;
+				model = 2;
+				t = new passiveModel();
+				t.start();
+				String ip= client.getLocalAddress().toString();
+				ip = ip.substring(1);
+				ip = ip.trim();
+				ip = ip.replace('.',',');
+				int a = clientPort / 256;
+				int b = clientPort % 256;
+			
+				String response = (ip+","+a+"," +b);
+				responseMeg("227 ="+response);
 				break;
 			case"RETR":
 				if(!openDataPort)
 				{
-					responseMeg("PORT or PASV at first");
+					responseMeg("425 user PORT or PASV to set TCP connection first!");
+				}
+				else if(connectClient)
+				{
+					responseMeg("426 fail to connect to client!");
+				}
+				else if(command.length == 2)
+				{
+					fileName = command[1];
+					isGet = false;
+					if(model == 1)
+					{
+						t.start();
+						t.join();
+					}
+					else if(model == 2)
+					{
+						t.join();
+					}
 				}
 				else
 				{
-					t.join();
-					responseMeg("t join");
+					responseMeg("500 filename error");
 				}
 				break;
 			case"STOR":
 				if(!openDataPort)
 				{
-					responseMeg("PORT or PASV at first");
+					responseMeg("425 PORT or PASV at first");
 				}
 				else
 				{
-					
+					fileName = command[1];
+
+					isGet = true;
+					if(model == 1)
+					{
+						t.start();
+						t.join();
+					}
+					else if(model == 2)
+					{
+						t.join();
+					}
 				}
 				break;
 			case"ABOR":
 			case"QUIT":
-				responseMeg("client close");
+				responseMeg("221 Goodbye!");
 				client.close();
 				return;
 			case"SYST":
@@ -165,19 +210,15 @@ class mulipleServer extends Thread{
 				}
 				else
 				{
-					responseMeg("we only support TYPE I");
+					responseMeg("500 we only support TYPE I");
 				}
 				break;
 				default:
-					responseMeg("invalid input");
+					responseMeg("500 invalid input");
 					break;
 			}
 		}
 		
-		//transform file
-		
-
-		//client.close();
 	}
 		catch(IOException e){
 			System.out.println("IOException: " + e.getMessage());
@@ -187,6 +228,15 @@ class mulipleServer extends Thread{
 		}
 }
 
+	public static boolean isEmail(String email) {
+		Pattern emailPattern = Pattern.compile("\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*");
+		Matcher matcher = emailPattern.matcher(email);
+		if(matcher.find()){
+		return true;
+		}
+		return false;
+	}	
+	
 public void getClientIPPort(String para) throws UnknownHostException
 {
 	try{
@@ -244,10 +294,10 @@ public void responseMeg(String response)
 	}
 }
 
-class dataPort extends Thread{
+class portModel extends Thread{
 	InetAddress clientAddr;
 	int clientPort;
-	dataPort (InetAddress clientAddr,int clientPort)throws Throwable
+	portModel (InetAddress clientAddr,int clientPort)throws Throwable
 	{
 		this.clientAddr = clientAddr;
 		this.clientPort = clientPort;
@@ -255,45 +305,152 @@ class dataPort extends Thread{
 	}
 	public void run()
 	{
+		if(isGet)
+		{
+			get();
+		}
+		else
+		{
+			put();
+		}
+	}
+	public void get()
+	{
 		try {
-			System.out.print(clientAddr);
-			System.out.print(clientPort);
-			File localFile = new File("te.txt");
+			Socket socket = new Socket(clientAddr,clientPort);
+			InputStream in = socket.getInputStream();
+			byte[] buffer = new byte[4096];
+			int count;
+			responseMeg("150 download start");
+			if(socket.isConnected())
+			{
+				File localFile = new File(fileName);
+				FileOutputStream is = new FileOutputStream(localFile);
+				while((count = in.read(buffer))!=-1){	
+				//System.out.println(bytes);
+				is.write(buffer,0,count);			
+				}
+				responseMeg("226 update complete.");
+				is.close();
+			}
+			in.close();
+			socket.close();
+			openDataPort = false;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			connectClient = false;
+			openDataPort = false;
+		}
+	}
+	public void put()
+	{
+		try {
+			File localFile = new File(fileName);
 			FileInputStream fis = new FileInputStream(localFile);
 			Socket socket = new Socket(clientAddr,clientPort);
 			connectClient = true;
 			OutputStream out = socket.getOutputStream();
 			byte[] buffer = new byte[4096];
 			int count;
+			responseMeg("150 download start");
 			while((count = fis.read(buffer))!=-1){	
 				//System.out.println(bytes);
 				out.write(buffer,0,count);			
 			}
+			responseMeg("226 download complete.");
 			fis.close();
 			out.close();
 			socket.close();
+			openDataPort = false;
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			responseMeg("451 cannot open the file");
 			connectClient = false;
+			openDataPort = false;
 		}
 	}
 }
 
 class passiveModel extends Thread{
-	Socket client;
-	InputStream in;
-	OutputStream out;
-	passiveModel (Socket client)throws Throwable
+	public Socket socket;
+	public ServerSocket server;
+	passiveModel ()throws Throwable
 	{
-		this.client = client;
-		in = this.client.getInputStream();
-		out = this.client.getOutputStream();
-		
+		this.server = new ServerSocket(0);
+		clientPort = this.server.getLocalPort();
+		clientAddr = this.server.getInetAddress();
 	}
 	public void run()
 	{
-		
+		try {
+			socket = server.accept();
+			if(isGet)
+			{
+				get();
+			}
+			else
+			{
+				put();
+			}
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public void put(){
+		try{
+		File localFile = new File(fileName);
+		FileInputStream is = new FileInputStream(localFile);
+		OutputStream out = socket.getOutputStream();
+		int count;
+		responseMeg("150 download start");
+		while(true){
+			byte[] buffer = new byte[4096];
+			count = is.read(buffer);	
+			if(count == -1 )
+			{
+				out.write(buffer,0,0);
+				break;
+			}
+			out.write(buffer,0,count);
+		}
+		is.close();
+		server.close();
+		openDataPort = false;
+		responseMeg("226 download complete.");
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			responseMeg("451 cannot open the file");
+			openDataPort = false;
+			e.printStackTrace();
+		}
+	}
+	public void get()
+	{
+	
+		try {
+			File localFile = new File(fileName);
+			FileOutputStream is = null;
+			is = new FileOutputStream(localFile);
+			InputStream in = socket.getInputStream();
+			byte[] buffer = new byte[4096];
+			int count;
+			responseMeg("150 update start");
+			while((count = in.read(buffer))!=-1){	
+				is.write(buffer,0,count);			
+			}
+			is.close();
+			server.close();
+			responseMeg("226 update complete.");
+			openDataPort = false;
+			}
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				openDataPort = false;
+			}
 	}
 }
 
