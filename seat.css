@@ -1,0 +1,43 @@
+.a{
+	border-image-source: "可选座位.png"
+	color: #fff;
+	background: #fff;
+	width: 20px;
+	height: 17px;
+}
+
+img{
+	 width:20px;
+	 height:17px;
+	 line-height: 21px;
+margin-bottom: 0px;
+margin-left: 2px;
+margin-right: 2px;
+margin-top: 0px;
+}
+
+
+.1{
+color: #f60;
+	background: #666;
+	width: 20px;
+height: 17px;
+}
+.2{
+color: #f60;
+background: #666;
+width: 20px;
+height: 17px;
+}
+.3{
+color: #f60;
+	background: #666;
+	width: 20px;
+height: 17px;
+}
+.4{
+color: #f60;
+	background: #666;
+	width: 20px;
+height: 17px;
+}

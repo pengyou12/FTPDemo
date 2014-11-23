@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="ua-windows ua-webkit">
+<script src="http://soso.qstatic.com/wenwen/deploy/js/sea_modules/jquery/1.7.2/jquery-1.7.2.min_a0069db.js"></script>
+<link rel="stylesheet" href="seat.css" type="text/css" />
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="renderer" content="webkit">
+
+    <title>0表示不可选；1表示空闲座位；2表示已被选；3表示自己当前选中；4表示自己上一次选中</title>
+</head>
+<css
+<body>
+<div class = "head">
+	<h7>选择座位</h7>
+</div>
+<div class = "view">
+	<table>
+	<tr>
+		<th>第一排</th>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	<td class = 1><span ></span></td>
+	</tr>
+<tr>
+	<th>第二排</th>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+<td class = 2><span></span></td>
+</tr>
+<tr>
+	<th>第三排</th>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+<td class = 3><span></span></td>
+</tr>
+<tr>
+	<th>第四排</th>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+<td class = 4><span></span></td>
+</tr>
+	</table>
+</div>
+<div class="form-group" id="submitGroup">
+    <div class="col-xs-offset-3 col-xs-9">
+        <button onclick="ajaxForm();" class="btn btn-default" id="submitBtn">提交</button>
+        <p class="help-block" id="helpLoading" style="display: none"><img src="{% static "img/loading.gif" %}">正在认证，请稍候...</p>
+        <p class="help-block" id="helpSubmit"></p>
+    </div>
+</div>
+</body>
+
+<script language="JavaScript">
+$(".1").append("<img src='可选座位.png' />")
+$(".2").append("<img src='不可选座位.png'/>")
+$(".3").append("<img src='选择座位.png'/>")
+$(".4").append("<img src='上次选择座位.png'/>")
+</script>
+
+
+</html>
